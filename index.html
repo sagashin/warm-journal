@@ -397,7 +397,11 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js')
-          .then((reg) => console.log('ServiceWorker registered:', reg.scope))
+          .then((reg) => {
+            console.log('ServiceWorker registered:', reg.scope);
+            // 起動時に最新のService Workerの更新を確認
+            reg.update();
+          })
           .catch((err) => console.log('ServiceWorker registration failed:', err));
       });
     }
