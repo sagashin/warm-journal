@@ -2445,6 +2445,359 @@ body.app-locked .app-header {
   transform: translate(2px, -2px);
 }
 
+/* ==========================================================================
+   モバイル・レスポンシブ完全最適化 (Mobile First Optimization <= 768px)
+   ========================================================================== */
+
+/* デスクトップではFABは非表示 */
+.mobile-fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* 1. 全体レイアウト & セーフエリア */
+  body {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 72px);
+  }
+
+  .main-content {
+    padding: 14px 12px calc(env(safe-area-inset-bottom) + 80px);
+    gap: 16px;
+  }
+
+  /* 2. ヘッダーのスリム化 */
+  .header-container {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+  }
+
+  .brand-title {
+    font-size: 1.1rem;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .btn-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+
+  /* ヘッダーの大きな「日記を書く」ボタンはスマホでは非表示にし、FABに任せる */
+  .app-header .btn-primary#btnNewEntry {
+    display: none;
+  }
+
+  /* 3. モバイル用フローティング執筆ボタン (FAB) */
+  .mobile-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    right: 20px;
+    bottom: calc(env(safe-area-inset-bottom) + 78px);
+    width: 58px;
+    height: 58px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--color-primary), #3b5f52);
+    color: #ffffff;
+    font-size: 1.5rem;
+    box-shadow: 0 8px 24px rgba(var(--color-primary-rgb), 0.45);
+    z-index: 900;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition-bounce);
+  }
+
+  .mobile-fab:active {
+    transform: scale(0.9);
+  }
+
+  /* 4. ボトムナビゲーションバー（親指で片手操作できる下部固定タブ） */
+  .view-switcher-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 800;
+    margin-bottom: 0;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-color);
+    padding: 6px 12px calc(env(safe-area-inset-bottom) + 6px);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+  }
+
+  [data-theme="dark"] .view-switcher-bar {
+    background: rgba(32, 36, 34, 0.94);
+  }
+
+  .view-switcher {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .view-tab-btn {
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+  }
+
+  .view-tab-btn span:first-child {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .view-tab-btn.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    box-shadow: none;
+  }
+
+  /* 5. 今日のお題バナー & フィルター */
+  .prompt-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .prompt-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .search-box {
+    min-width: 100%;
+  }
+
+  .mood-filters {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mood-filter-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+
+  /* 6. 日記カード */
+  .diary-card {
+    padding: 16px 14px;
+    gap: 12px;
+  }
+
+  .card-top {
+    gap: 8px;
+  }
+
+  .date-badge {
+    min-width: 44px;
+    padding: 4px 6px;
+  }
+
+  .date-day {
+    font-size: 1.2rem;
+  }
+
+  .card-title {
+    font-size: 1.1rem;
+  }
+
+  .card-content {
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  .card-album-link {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .album-card-title {
+    font-size: 0.88rem;
+  }
+
+  /* 7. カレンダーのスマホ最適化（画面幅ぴったりに収まる） */
+  .calendar-wrap {
+    padding: 14px 10px;
+    border-radius: var(--radius-md);
+    gap: 14px;
+  }
+
+  .cal-year {
+    font-size: 0.95rem;
+  }
+
+  .cal-month {
+    font-size: 1.25rem;
+  }
+
+  .calendar-weekdays {
+    font-size: 0.75rem;
+  }
+
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .cal-cell {
+    min-height: 52px;
+    padding: 4px 2px;
+    border-radius: 6px;
+  }
+
+  .cal-cell-num {
+    font-size: 0.78rem;
+  }
+
+  .cal-mood-emoji {
+    font-size: 0.95rem;
+  }
+
+  .cal-photo-dot {
+    font-size: 0.65rem;
+  }
+
+  .calendar-preview-container {
+    padding-top: 14px;
+  }
+
+  .cal-preview-item {
+    padding: 12px 14px;
+  }
+
+  /* 8. 統計画面（スマホ向け2列グリッド） */
+  .stats-summary-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+
+  .stat-icon {
+    font-size: 1.6rem;
+  }
+
+  .stat-value {
+    font-size: 1.35rem;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+  }
+
+  .stats-section-card {
+    padding: 16px 14px;
+  }
+
+  .mood-bar-item {
+    grid-template-columns: 85px 1fr 70px;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+
+  /* 9. エディタモーダル（全画面ボトムシート化） */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-container {
+    max-width: 100%;
+    width: 100%;
+    height: 94vh;
+    max-height: 94vh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+  }
+
+  .modal-overlay.active .modal-container {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    padding: 14px 18px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .editor-meta-row {
+    gap: 8px;
+  }
+
+  .editor-date-input {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .mood-selector {
+    padding: 2px;
+  }
+
+  .mood-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.05rem;
+  }
+
+  .editor-content-input {
+    min-height: 140px;
+    font-size: 0.95rem;
+  }
+
+  .modal-footer {
+    padding: 12px 18px;
+  }
+
+  /* 10. 写真アルバムグリッド */
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+}
+
+
 
 
 

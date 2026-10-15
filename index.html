@@ -2,7 +2,7 @@
 <html lang="ja" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Warm Journal - 心が整う上質な日記手帳</title>
   <meta name="description" content="日々の気分や大切な思い出、写真を美しく残す手帳風の日記アプリ。オフライン完全対応でデータも安全に保存。">
   
@@ -380,6 +380,11 @@
       </div>
     </div>
   </div>
+
+  <!-- モバイル用フローティング執筆ボタン (FAB) -->
+  <button type="button" class="mobile-fab" id="btnMobileFab" title="日記を書く" aria-label="日記を書く">
+    <span>✏️</span>
+  </button>
 
   <!-- トースト通知コンテナ -->
   <div class="toast-container" id="toastContainer"></div>

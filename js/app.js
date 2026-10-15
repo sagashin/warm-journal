@@ -172,10 +172,17 @@ class DiaryApp {
   }
 
   attachEvents() {
-    // 新規作成ボタン
-    this.btnNewEntry.addEventListener('click', () => {
+    // 新規作成ボタン（ヘッダー & モバイルFAB）
+    const openNewDiary = () => {
       this.editor.open(null, PROMPTS[this.currentPromptIndex]);
-    });
+    };
+    if (this.btnNewEntry) {
+      this.btnNewEntry.addEventListener('click', openNewDiary);
+    }
+    const mobileFab = document.getElementById('btnMobileFab');
+    if (mobileFab) {
+      mobileFab.addEventListener('click', openNewDiary);
+    }
 
     // ビュー切り替えタブ
     this.viewTabs.forEach((tab) => {
