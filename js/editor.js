@@ -60,6 +60,10 @@ export class DiaryEditor {
     this.quickTagsContainer = document.getElementById('quickTagsContainer');
     this.customTagInput = document.getElementById('customTagInput');
 
+    // アルバム連携入力
+    this.albumUrlInput = document.getElementById('editorAlbumUrl');
+    this.albumTitleInput = document.getElementById('editorAlbumTitle');
+
     this.btnSave = document.getElementById('btnSaveEntry');
     this.btnClose = document.getElementById('btnCloseEditor');
     this.btnCancel = document.getElementById('btnCancelEditor');
@@ -160,6 +164,8 @@ export class DiaryEditor {
       this.selectedTags = new Set(entry.tags || []);
       this.currentPhotos = Array.isArray(entry.photos) ? [...entry.photos] : [];
       this.currentPrompt = entry.prompt || '';
+      this.albumUrlInput.value = entry.albumUrl || '';
+      this.albumTitleInput.value = entry.albumTitle || '';
     } else {
       // 新規作成
       this.currentEntryId = null;
@@ -172,6 +178,8 @@ export class DiaryEditor {
       this.selectedTags = new Set();
       this.currentPhotos = [];
       this.currentPrompt = defaultPrompt || '';
+      this.albumUrlInput.value = '';
+      this.albumTitleInput.value = '';
     }
 
     // UI反映
@@ -346,8 +354,11 @@ export class DiaryEditor {
     const date = this.dateInput.value;
     const time = this.timeInput.value;
 
-    if (!title && !content && this.currentPhotos.length === 0) {
-      alert('タイトル、本文、または写真を1つ以上入力してください。');
+    const albumUrl = this.albumUrlInput ? this.albumUrlInput.value.trim() : '';
+    const albumTitle = this.albumTitleInput ? this.albumTitleInput.value.trim() : '';
+
+    if (!title && !content && this.currentPhotos.length === 0 && !albumUrl) {
+      alert('タイトル、本文、写真、またはアルバムリンクのいずれかを入力してください。');
       return;
     }
 
@@ -355,12 +366,14 @@ export class DiaryEditor {
       id: this.currentEntryId,
       date,
       time,
-      title: title || (content ? content.slice(0, 24) + '...' : '写真の日記'),
+      title: title || (content ? content.slice(0, 24) + '...' : albumTitle ? albumTitle : '思い出の日記'),
       content,
       mood: this.selectedMood,
       tags: Array.from(this.selectedTags),
       photos: this.currentPhotos,
-      prompt: this.currentPrompt
+      prompt: this.currentPrompt,
+      albumUrl: albumUrl || null,
+      albumTitle: albumTitle || null
     };
 
     if (this.onSave) {

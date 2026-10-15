@@ -194,6 +194,43 @@ export class DiaryTimeline {
       card.appendChild(photosGrid);
     }
 
+    // Googleフォト・外部アルバム連携カード
+    if (entry.albumUrl) {
+      const isGooglePhotos = entry.albumUrl.includes('photos.app.goo.gl') || entry.albumUrl.includes('photos.google.com');
+      const albumCard = document.createElement('a');
+      albumCard.className = `card-album-link ${isGooglePhotos ? 'google-photos' : ''}`;
+      albumCard.href = entry.albumUrl;
+      albumCard.target = '_blank';
+      albumCard.rel = 'noopener noreferrer';
+      albumCard.title = '別タブでアルバムを開く';
+
+      const iconSvg = isGooglePhotos ? `
+        <svg class="google-photos-svg" width="26" height="26" viewBox="0 0 24 24">
+          <path fill="#EA4335" d="M12 6.5A5.5 5.5 0 0 1 17.5 12V6.5H12z"/>
+          <path fill="#4285F4" d="M6.5 12A5.5 5.5 0 0 1 12 6.5H6.5V12z"/>
+          <path fill="#34A853" d="M12 17.5A5.5 5.5 0 0 1 6.5 12v5.5H12z"/>
+          <path fill="#FBBC04" d="M17.5 12A5.5 5.5 0 0 1 12 17.5h5.5V12z"/>
+        </svg>
+      ` : '<span style="font-size: 1.3rem;">🖼️</span>';
+
+      albumCard.innerHTML = `
+        <div class="album-card-left">
+          <div class="album-card-icon-wrap">
+            ${iconSvg}
+          </div>
+          <div class="album-card-text">
+            <span class="album-card-badge">${isGooglePhotos ? 'Google フォト 共有アルバム' : '外部アルバム'}</span>
+            <span class="album-card-title">${entry.albumTitle || 'アルバムの写真・動画を見る'}</span>
+          </div>
+        </div>
+        <div class="album-card-action">
+          <span>見る</span>
+          <span class="album-card-arrow">↗</span>
+        </div>
+      `;
+      card.appendChild(albumCard);
+    }
+
     // タグ
     if (entry.tags && entry.tags.length > 0) {
       const tagsWrap = document.createElement('div');

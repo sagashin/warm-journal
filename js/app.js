@@ -440,6 +440,31 @@ class DiaryApp {
 
     const samples = [
       {
+        id: `sample_sports_${Date.now()}`,
+        date: formatDate(0),
+        time: '16:45',
+        title: '息子の小学校 最後の運動会 🏃‍♂️🏅',
+        content: '朝から抜けるような秋晴れ！息子の小学校生活最後の運動会。\n赤組のアンカーとして全力でトラックを駆け抜ける息子の姿を見て、思わず胸が熱くなった。\n入学した頃は小さかった背中が、いつの間にかたくましく大きくなっていて感動。\n手作りのお弁当も家族みんなで美味しく食べた。本当に素晴らしい一日だった！',
+        mood: 'ecstatic',
+        tags: ['運動会', '家族', '感謝', '成長'],
+        prompt: '今日一番感動したこと、心に残ったシーンは？✨',
+        albumUrl: 'https://photos.app.goo.gl/sports-day-sample-2026',
+        albumTitle: 'Googleフォト：息子の運動会2026（写真84枚・高画質動画）',
+        photos: [
+          {
+            id: 'p_sports1',
+            name: 'sports_running.svg',
+            dataUrl: makeSampleImage('#2b5876', '#4e4376', '🏃‍♂️', '全力のリレー')
+          },
+          {
+            id: 'p_sports2',
+            name: 'sports_medal.svg',
+            dataUrl: makeSampleImage('#d4a373', '#a26738', '🏅', '金メダルと笑顔')
+          }
+        ],
+        createdAt: Date.now()
+      },
+      {
         id: `sample_today_${Date.now()}`,
         date: formatDate(0),
         time: '14:20',

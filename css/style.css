@@ -2281,5 +2281,170 @@ body.app-locked .app-header {
   border: 1px solid var(--border-color);
 }
 
+/* ==========================================================================
+   Googleフォト・外部アルバム連携カード (Album Link Card)
+   ========================================================================== */
+
+/* エディタ側 */
+.album-link-group {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.album-link-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.album-link-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.album-inputs-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.album-url-input,
+.album-title-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-size: 0.88rem;
+  color: var(--text-main);
+  transition: var(--transition-normal);
+}
+
+.album-url-input:focus,
+.album-title-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
+}
+
+/* タイムライン・カード側 */
+.card-album-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-bounce);
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-album-link:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(66, 133, 244, 0.4);
+  background: var(--bg-card);
+}
+
+.card-album-link.google-photos::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #ea4335, #fbbc04, #34a853, #4285f4);
+}
+
+.album-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.album-card-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.album-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.album-card-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4285f4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.album-card-title {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-card-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: var(--transition-normal);
+}
+
+.card-album-link:hover .album-card-action {
+  background: #4285f4;
+  color: #fff;
+}
+
+.album-card-arrow {
+  font-size: 0.95rem;
+  transition: transform 0.2s ease;
+}
+
+.card-album-link:hover .album-card-arrow {
+  transform: translate(2px, -2px);
+}
+
+
 
 
