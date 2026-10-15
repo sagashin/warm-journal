@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Warm Journal - 心が整う上質な日記手帳</title>
+  <meta name="description" content="日々の気分や大切な思い出、写真を美しく残す手帳風の日記アプリ。オフライン完全対応でデータも安全に保存。">
+  
+  <!-- PWA & テーマ設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#426b5d">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+
+  <!-- スタイルシート -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📔</text></svg>">
+</head>
+<body>
+
+  <!-- アプリヘッダー -->
+  <header class="app-header">
+    <div class="header-container">
+      <a class="brand" id="brandLogo" href="#">
+        <div class="brand-icon">📔</div>
+        <div>
+          <h1 class="brand-title">Warm Journal</h1>
+          <div class="brand-subtitle">Private Diary & Reflection</div>
+        </div>
+      </a>
+
+      <div class="header-actions">
+        <!-- AI振り返り設定 -->
+        <button type="button" class="btn-icon" id="btnHeaderAi" title="AI共感アシスタント設定" aria-label="AIアシスタント設定">
+          <span>✨</span>
+        </button>
+
+        <!-- パスコードロック -->
+        <button type="button" class="btn-icon" id="btnHeaderLock" title="パスコードロック" aria-label="パスコードロック">
+          <span>🔓</span>
+        </button>
+
+        <!-- バックアップ・エクスポート -->
+        <button type="button" class="btn-icon" id="btnExport" title="バックアップ保存 (JSON)" aria-label="バックアップ保存">
+          <span>📦</span>
+        </button>
+        <button type="button" class="btn-icon" id="btnImport" title="バックアップ復元" aria-label="バックアップ復元">
+          <span>📥</span>
+        </button>
+        <input type="file" id="importFileInput" accept=".json" style="display: none;">
+
+        <!-- テーマ切り替え（ライト / ダーク） -->
+        <button type="button" class="btn-icon" id="btnThemeToggle" title="ダークモード切替" aria-label="テーマ切替">
+          <span id="themeIcon">🌙</span>
+        </button>
+
+        <!-- 新規日記作成ボタン -->
+        <button type="button" class="btn-primary" id="btnNewEntry">
+          <span>✏️</span>
+          <span>日記を書く</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="main-content">
+    
+    <!-- ビュー切り替えタブバー -->
+    <nav class="view-switcher-bar">
+      <div class="view-switcher" role="tablist">
+        <button type="button" class="view-tab-btn active" id="viewTabTimeline" data-view="timeline" role="tab" aria-selected="true">
+          <span>📖</span> タイムライン
+        </button>
+        <button type="button" class="view-tab-btn" id="viewTabCalendar" data-view="calendar" role="tab" aria-selected="false">
+          <span>📅</span> カレンダー
+        </button>
+        <button type="button" class="view-tab-btn" id="viewTabGallery" data-view="gallery" role="tab" aria-selected="false">
+          <span>🖼️</span> アルバム
+        </button>
+        <button type="button" class="view-tab-btn" id="viewTabStats" data-view="stats" role="tab" aria-selected="false">
+          <span>📊</span> 統計・習慣
+        </button>
+      </div>
+    </nav>
+
+    <!-- 過去の今日 (On This Day) カードコンテナ -->
+    <div id="onThisDayContainer" style="display: none;"></div>
+
+    <!-- 1. タイムラインセクション -->
+    <section class="view-section active" id="viewSectionTimeline">
+      <!-- 今日のお題バナー（書くきっかけを提案） -->
+      <section class="prompt-banner" id="promptBanner">
+        <div class="prompt-content">
+          <div class="prompt-tag">
+            <span>💡</span> 今日の問いかけ (Writing Prompt)
+          </div>
+          <div class="prompt-text" id="promptText">
+            今日一番美味しかった食べものは何ですか？🍽️
+          </div>
+        </div>
+        <div class="prompt-actions">
+          <button type="button" class="btn-prompt-write" id="btnPromptWrite">
+            <span>✏️</span> このお題で書く
+          </button>
+          <button type="button" class="btn-prompt-refresh" id="btnPromptRefresh" title="別のお題に変える" aria-label="お題更新">
+            <span>🎲</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 検索 & フィルターツールバー -->
+      <section class="filter-bar">
+        <!-- フリーワード検索 -->
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="search" class="search-input" id="searchInput" placeholder="日記を検索（タイトル・本文・タグ）...">
+        </div>
+
+        <!-- 気分フィルター -->
+        <div class="mood-filters" id="moodFilters">
+          <!-- JSで動的生成 -->
+        </div>
+      </section>
+
+      <!-- タイムライン日記一覧 -->
+      <section class="timeline-container" id="timelineContainer">
+        <!-- JSでエントリーカードを描画 -->
+      </section>
+    </section>
+
+    <!-- 2. カレンダーセクション -->
+    <section class="view-section" id="viewSectionCalendar">
+      <div id="calendarContainer"></div>
+    </section>
+
+    <!-- 3. 写真アルバム・ギャラリーセクション -->
+    <section class="view-section" id="viewSectionGallery">
+      <div id="galleryContainer"></div>
+    </section>
+
+    <!-- 4. 統計・インサイトセクション -->
+    <section class="view-section" id="viewSectionStats">
+      <div id="statsContainer"></div>
+    </section>
+
+  </main>
+
+  <!-- エディタモーダル -->
+  <div class="modal-overlay" id="editorModal">
+    <div class="modal-container">
+      
+      <!-- モーダルヘッダー -->
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span style="font-size: 1.25rem;">✍️</span>
+          <h2 class="modal-title" id="editorModalTitle">新しい日記を書く</h2>
+        </div>
+        <button type="button" class="btn-card-action" id="btnCloseEditor" title="閉じる">✕</button>
+      </div>
+
+      <!-- モーダル本文 -->
+      <div class="modal-body">
+        
+        <!-- お題引用（ある場合表示） -->
+        <div class="editor-prompt-card" id="editorPromptCard" style="display: none;">
+          <span id="editorPromptText"></span>
+          <button type="button" class="btn-card-action" id="btnRemovePrompt" title="お題を解除" style="color: inherit;">✕</button>
+        </div>
+
+        <!-- 日付・時間・気分選択 -->
+        <div class="editor-meta-row">
+          <input type="date" class="editor-date-input" id="editorDate" required>
+          <input type="time" class="editor-date-input" id="editorTime">
+
+          <!-- 気分ピッカー（5段階） -->
+          <div class="mood-selector" title="今日の気分を選んでください">
+            <button type="button" class="mood-btn" data-mood="ecstatic" title="最高">😄</button>
+            <button type="button" class="mood-btn selected" data-mood="happy" title="良い">😊</button>
+            <button type="button" class="mood-btn" data-mood="neutral" title="普通">😐</button>
+            <button type="button" class="mood-btn" data-mood="cloudy" title="モヤモヤ">🌧️</button>
+            <button type="button" class="mood-btn" data-mood="tired" title="つかれた">🥀</button>
+          </div>
+        </div>
+
+        <!-- タイトル -->
+        <input type="text" class="editor-title-input" id="editorTitle" placeholder="タイトル（空欄でもOK）" maxlength="100">
+
+        <!-- 本文 -->
+        <textarea class="editor-content-input" id="editorContent" placeholder="今日あったこと、感じたこと、考えたこと... 心のままに書いてみましょう。" rows="7"></textarea>
+
+        <!-- 写真添付エリア -->
+        <div class="photo-uploader">
+          <div class="photo-dropzone" id="photoDropzone">
+            <div class="photo-dropzone-icon">📷</div>
+            <div class="photo-dropzone-text">写真をドラッグ＆ドロップ、またはクリックして選択</div>
+            <div class="photo-dropzone-hint">複数枚対応・安全にブラウザ内に保存されます</div>
+          </div>
+          <input type="file" id="photoFileInput" accept="image/*" multiple style="display: none;">
+          
+          <!-- 写真プレビューグリッド -->
+          <div class="editor-photos-preview" id="photosPreview"></div>
+        </div>
+
+        <!-- タグ選択エリア -->
+        <div class="tags-input-group">
+          <span class="tags-label">🏷️ タグ</span>
+          <div class="quick-tags-wrap" id="quickTagsContainer"></div>
+          <input type="text" class="custom-tag-input" id="customTagInput" placeholder="新しいタグを入力してEnterで追加...">
+        </div>
+
+      </div>
+
+      <!-- モーダルフッター -->
+      <div class="modal-footer">
+        <div class="char-counter" id="charCount">0 文字</div>
+        <div class="modal-footer-actions">
+          <button type="button" class="btn-secondary" id="btnCancelEditor">キャンセル</button>
+          <button type="button" class="btn-primary" id="btnSaveEntry">
+            <span>💾</span>
+            <span>保存する</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 写真ライトボックスモーダル -->
+  <div class="lightbox-overlay" id="lightboxOverlay">
+    <button type="button" class="lightbox-close" id="lightboxClose" title="閉じる">✕</button>
+    <img src="" alt="拡大写真" class="lightbox-img" id="lightboxImg">
+  </div>
+
+  <!-- PINコードロック画面 -->
+  <div class="lock-screen" id="lockScreen">
+    <div class="lock-panel">
+      <div class="lock-avatar">🔒</div>
+      <h3 class="lock-title">Warm Journal</h3>
+      <div class="lock-message" id="lockMessage">暗証番号を入力してください</div>
+      
+      <!-- 入力インジケータ（4つの丸） -->
+      <div class="pin-dots-wrap">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+
+      <!-- 数字キーパッド -->
+      <div class="pin-keypad">
+        <button type="button" class="keypad-btn" data-key="1">1</button>
+        <button type="button" class="keypad-btn" data-key="2">2</button>
+        <button type="button" class="keypad-btn" data-key="3">3</button>
+        <button type="button" class="keypad-btn" data-key="4">4</button>
+        <button type="button" class="keypad-btn" data-key="5">5</button>
+        <button type="button" class="keypad-btn" data-key="6">6</button>
+        <button type="button" class="keypad-btn" data-key="7">7</button>
+        <button type="button" class="keypad-btn" data-key="8">8</button>
+        <button type="button" class="keypad-btn" data-key="9">9</button>
+        <div class="keypad-btn action"></div>
+        <button type="button" class="keypad-btn" data-key="0">0</button>
+        <button type="button" class="keypad-btn action" data-key="backspace">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PINコード設定モーダル -->
+  <div class="modal-overlay" id="pinSettingsModal">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span>🔒</span>
+          <h3 class="modal-title">パスコード保護設定</h3>
+        </div>
+        <button type="button" class="btn-card-action" id="btnClosePinSettings" title="閉じる">✕</button>
+      </div>
+
+      <div class="modal-body" style="gap: 16px;">
+        <p class="modal-desc" id="pinSettingsStatus" style="font-size: 0.9rem; color: var(--text-muted);"></p>
+
+        <!-- 現在のPIN（既に設定されている場合のみ表示） -->
+        <div class="pin-setting-group" id="currentPinGroup" style="display: none;">
+          <label for="settingCurrentPin">現在の暗証番号 (4桁)</label>
+          <input type="password" maxlength="4" class="pin-setting-input" id="settingCurrentPin" placeholder="••••">
+        </div>
+
+        <div class="pin-setting-group">
+          <label for="settingNewPin">新しい暗証番号 (4桁)</label>
+          <input type="password" maxlength="4" class="pin-setting-input" id="settingNewPin" placeholder="••••">
+        </div>
+
+        <div class="pin-setting-group">
+          <label for="settingConfirmPin">確認のためもう一度入力</label>
+          <input type="password" maxlength="4" class="pin-setting-input" id="settingConfirmPin" placeholder="••••">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-secondary" id="btnRemovePinSetting" style="display: none; color: var(--color-danger); border-color: rgba(200,90,90,0.3);">
+          ロック解除
+        </button>
+        <div style="display: flex; gap: 8px; margin-left: auto;">
+          <button type="button" class="btn-primary" id="btnSavePinSetting">
+            <span>💾</span> 保存する
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI共感フィードバックモーダル -->
+  <div class="modal-overlay" id="aiFeedbackModal">
+    <div class="modal-container" style="max-width: 580px;">
+      <div class="modal-header ai-modal-header">
+        <div class="modal-title-wrap">
+          <span>🌿</span>
+          <h3 class="modal-title" id="aiModalTitle">AIからの温かいひとこと</h3>
+        </div>
+        <button type="button" class="btn-card-action" id="btnCloseAiModal" title="閉じる">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 24px;">
+        <!-- ローディング中表示 -->
+        <div class="ai-loading-container" id="aiFeedbackLoading" style="display: none;">
+          <div class="ai-spinner"></div>
+          <div class="ai-loading-text">日記の言葉に耳を傾けています...</div>
+        </div>
+
+        <!-- 結果表示領域 -->
+        <div id="aiFeedbackContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gemini APIキー設定モーダル -->
+  <div class="modal-overlay" id="aiKeySettingsModal">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span>✨</span>
+          <h3 class="modal-title">AI共感アシスタント設定</h3>
+        </div>
+        <button type="button" class="btn-card-action" id="btnCloseApiKeyModal" title="閉じる">✕</button>
+      </div>
+
+      <div class="modal-body" style="gap: 16px;">
+        <div class="ai-key-hint">
+          <strong>🌿 キーがなくても安心！</strong><br>
+          APIキーが未設定でも、内蔵の「スマート共感エンジン」が完全オフラインであなたの気分に寄り添ったメッセージを届けます。<br><br>
+          Google AI Studioの <strong>Gemini APIキー</strong> を登録すると、より深く個別の日記内容を読み解く最先端AIアシスタントをご利用いただけます。
+        </div>
+
+        <div class="pin-setting-group">
+          <label for="geminiApiKeyInput">Gemini API Key (任意)</label>
+          <input type="password" class="search-input" id="geminiApiKeyInput" placeholder="AIzaSy..." style="border-radius: var(--radius-sm);">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-secondary" id="btnRemoveApiKey" style="display: none; color: var(--color-danger); border-color: rgba(200,90,90,0.3);">
+          キーを削除
+        </button>
+        <div style="display: flex; gap: 8px; margin-left: auto;">
+          <button type="button" class="btn-primary" id="btnSaveApiKey">
+            <span>💾</span> 設定を保存
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知コンテナ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- メインスクリプト -->
+  <script type="module" src="js/app.js"></script>
+
+  <!-- PWA Service Worker 登録 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then((reg) => console.log('ServiceWorker registered:', reg.scope))
+          .catch((err) => console.log('ServiceWorker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
