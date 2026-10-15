@@ -4,7 +4,7 @@
  * Safari / iOS "Response served by service worker has redirections" 対策済み
  */
 
-const CACHE_NAME = 'warm-journal-v4';
+const CACHE_NAME = 'warm-journal-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

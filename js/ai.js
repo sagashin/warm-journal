@@ -314,6 +314,9 @@ ${entry.content}
 1. ✨ 共感とねぎらい（日記に書かれた具体的な出来事や気持ちを受け止めて優しく肯定）
 2. 💡 心温まる視点・小さな発見（前向きになれる視点や、頑張りを褒める言葉）
 3. 🌱 明日へのやさしい問いかけ（明日がちょっと楽しみになるような、プレッシャーのない小さな質問）
+
+【重要】
+途中で文章が途切れることなく、各セクションを2〜3文程度のあたたかい日本語で必ず最後の文末まで完全に完結させてください。
 `;
 
     const modelsToTry = [this.activeModel, ...CANDIDATE_MODELS.filter(m => m !== this.activeModel)];
@@ -337,14 +340,15 @@ ${entry.content}
             ],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 800
+              maxOutputTokens: 2500
             }
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          const candidate = data.candidates?.[0];
+          const text = candidate?.content?.parts?.map(p => p.text).filter(Boolean).join('\n') || candidate?.content?.parts?.[0]?.text;
           if (text) {
             // 成功したモデルを記録
             this.activeModel = model;
