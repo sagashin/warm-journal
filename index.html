@@ -161,6 +161,15 @@
       <!-- モーダル本文 -->
       <div class="modal-body">
         
+        <!-- 書きかけ下書き復元バナー -->
+        <div class="editor-draft-banner" id="editorDraftBanner" style="display: none;">
+          <div class="draft-banner-left">
+            <span>📝</span>
+            <span>前回書きかけの下書きを復元しました</span>
+          </div>
+          <button type="button" class="btn-discard-draft" id="btnDiscardDraft" title="下書きを破棄">破棄する</button>
+        </div>
+
         <!-- お題引用（ある場合表示） -->
         <div class="editor-prompt-card" id="editorPromptCard" style="display: none;">
           <span id="editorPromptText"></span>
@@ -364,7 +373,20 @@
 
         <div class="pin-setting-group">
           <label for="geminiApiKeyInput">Gemini API Key (任意)</label>
-          <input type="password" class="search-input" id="geminiApiKeyInput" placeholder="AIzaSy..." style="border-radius: var(--radius-sm);">
+          <div class="input-with-action">
+            <input type="password" class="search-input" id="geminiApiKeyInput" placeholder="AIzaSy..." style="border-radius: var(--radius-sm); width: 100%;">
+            <button type="button" class="btn-card-action" id="btnToggleApiKeyVisibility" title="キーの表示/非表示" aria-label="キーの表示切替">👁️</button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-direction: column;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="btn-secondary" id="btnTestApiKey" style="padding: 6px 14px; font-size: 0.85rem;">
+              <span>⚡</span> 接続テスト
+            </button>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">キーの有効性と通信状況を確認</span>
+          </div>
+          <div id="aiKeyTestResult" class="ai-key-test-result" style="display: none;"></div>
         </div>
       </div>
 

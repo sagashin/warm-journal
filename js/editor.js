@@ -1,7 +1,9 @@
 /**
  * Diary Editor Module
- * 写真の最適化処理・気分選択・タグ・お題・バリデーションを担当
+ * 写真の最適化処理・気分選択・タグ・お題・バリデーション・自動下書き保存を担当
  */
+
+import { formatLocalDate, formatLocalTime } from './dateUtils.js';
 
 export const PROMPTS = [
   '今日一番美味しかった食べものは何ですか？🍽️',
@@ -26,6 +28,8 @@ export const PRESET_TAGS = [
   '日常', '感謝', 'カフェ', '散歩', '読書', '仕事', '料理', '学び', '旅行', 'ひとり時間'
 ];
 
+const DRAFT_STORAGE_KEY = 'warm_diary_draft';
+
 export class DiaryEditor {
   constructor({ onSave, onCancel }) {
     this.onSave = onSave;
@@ -35,6 +39,8 @@ export class DiaryEditor {
     this.selectedMood = 'happy';
     this.selectedTags = new Set();
     this.currentPrompt = '';
+    this.initialSnapshot = null;
+    this.draftTimer = null;
 
     this.initElements();
     this.attachEvents();
@@ -51,6 +57,10 @@ export class DiaryEditor {
     this.promptCard = document.getElementById('editorPromptCard');
     this.promptText = document.getElementById('editorPromptText');
     this.btnRemovePrompt = document.getElementById('btnRemovePrompt');
+
+    // 下書き復元バナー
+    this.draftBanner = document.getElementById('editorDraftBanner');
+    this.btnDiscardDraft = document.getElementById('btnDiscardDraft');
 
     this.moodBtns = document.querySelectorAll('.mood-btn');
     this.photoDropzone = document.getElementById('photoDropzone');
@@ -70,24 +80,66 @@ export class DiaryEditor {
   }
 
   attachEvents() {
-    // 閉じる & キャンセル
+    // 閉じる & キャンセル（未保存の確認付き）
     this.btnClose.addEventListener('click', () => this.close());
     this.btnCancel.addEventListener('click', () => this.close());
     this.modal.addEventListener('click', (e) => {
+      // 背景クリック時の誤タップ保護
       if (e.target === this.modal) this.close();
     });
+
+    // ページ離脱時の保護
+    window.addEventListener('beforeunload', (e) => {
+      if (this.isOpen() && this.hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    // 下書き破棄ボタン
+    if (this.btnDiscardDraft) {
+      this.btnDiscardDraft.addEventListener('click', () => {
+        this.discardDraft();
+      });
+    }
 
     // 気分ボタン選択
     this.moodBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
         this.setMood(btn.dataset.mood);
+        this.scheduleDraftSave();
       });
     });
 
-    // 文字数カウント
+    // 入力変更監視（自動下書き保存 & 文字数カウント）
     this.contentInput.addEventListener('input', () => {
       this.updateCharCount();
+      this.scheduleDraftSave();
     });
+
+    this.titleInput.addEventListener('input', () => {
+      this.scheduleDraftSave();
+    });
+
+    this.dateInput.addEventListener('change', () => {
+      this.scheduleDraftSave();
+    });
+
+    this.timeInput.addEventListener('change', () => {
+      this.scheduleDraftSave();
+    });
+
+    if (this.albumUrlInput) {
+      this.albumUrlInput.addEventListener('input', () => {
+        this.scheduleDraftSave();
+      });
+    }
+
+    if (this.albumTitleInput) {
+      this.albumTitleInput.addEventListener('input', () => {
+        this.scheduleDraftSave();
+      });
+    }
 
     // 写真選択
     this.photoDropzone.addEventListener('click', () => {
@@ -123,6 +175,7 @@ export class DiaryEditor {
     this.btnRemovePrompt.addEventListener('click', () => {
       this.currentPrompt = '';
       this.promptCard.style.display = 'none';
+      this.scheduleDraftSave();
     });
 
     // カスタムタグ追加
@@ -134,6 +187,7 @@ export class DiaryEditor {
           this.selectedTags.add(tag);
           this.customTagInput.value = '';
           this.renderTags();
+          this.scheduleDraftSave();
         }
       }
     });
@@ -144,16 +198,20 @@ export class DiaryEditor {
     });
   }
 
+  isOpen() {
+    return this.modal && this.modal.classList.contains('active');
+  }
+
   /**
    * エディタを開く（新規または編集）
    */
   open(entry = null, defaultPrompt = '') {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().slice(0, 5);
+    const todayStr = formatLocalDate(now);
+    const timeStr = formatLocalTime(now);
 
-    if (entry) {
-      // 既存編集
+    if (entry && entry.id) {
+      // 既存日記の編集モード
       this.currentEntryId = entry.id;
       this.modalTitle.textContent = '日記を編集';
       this.dateInput.value = entry.date || todayStr;
@@ -166,20 +224,49 @@ export class DiaryEditor {
       this.currentPrompt = entry.prompt || '';
       this.albumUrlInput.value = entry.albumUrl || '';
       this.albumTitleInput.value = entry.albumTitle || '';
+
+      if (this.draftBanner) {
+        this.draftBanner.style.display = 'none';
+      }
     } else {
-      // 新規作成
+      // 新規作成モード
       this.currentEntryId = null;
       this.modalTitle.textContent = '新しい日記を書く';
-      this.dateInput.value = todayStr;
-      this.timeInput.value = timeStr;
-      this.titleInput.value = '';
-      this.contentInput.value = '';
-      this.selectedMood = 'happy';
-      this.selectedTags = new Set();
-      this.currentPhotos = [];
-      this.currentPrompt = defaultPrompt || '';
-      this.albumUrlInput.value = '';
-      this.albumTitleInput.value = '';
+
+      const draft = this.loadDraft();
+      if (draft) {
+        // 下書きがある場合は復元
+        this.dateInput.value = draft.date || (entry?.date || todayStr);
+        this.timeInput.value = draft.time || timeStr;
+        this.titleInput.value = draft.title || '';
+        this.contentInput.value = draft.content || '';
+        this.selectedMood = draft.mood || 'happy';
+        this.selectedTags = new Set(draft.tags || []);
+        this.currentPhotos = Array.isArray(draft.photos) ? [...draft.photos] : [];
+        this.currentPrompt = draft.prompt || defaultPrompt || '';
+        this.albumUrlInput.value = draft.albumUrl || '';
+        this.albumTitleInput.value = draft.albumTitle || '';
+
+        if (this.draftBanner) {
+          this.draftBanner.style.display = 'flex';
+        }
+      } else {
+        // 新規まっさらな状態
+        this.dateInput.value = entry?.date || todayStr;
+        this.timeInput.value = timeStr;
+        this.titleInput.value = '';
+        this.contentInput.value = '';
+        this.selectedMood = 'happy';
+        this.selectedTags = new Set();
+        this.currentPhotos = [];
+        this.currentPrompt = defaultPrompt || '';
+        this.albumUrlInput.value = '';
+        this.albumTitleInput.value = '';
+
+        if (this.draftBanner) {
+          this.draftBanner.style.display = 'none';
+        }
+      }
     }
 
     // UI反映
@@ -188,6 +275,9 @@ export class DiaryEditor {
     this.renderTags();
     this.renderPhotosPreview();
     this.updateCharCount();
+
+    // 変更検出用スナップショット
+    this.takeInitialSnapshot();
 
     // 表示
     this.modal.classList.add('active');
@@ -200,7 +290,69 @@ export class DiaryEditor {
     }, 100);
   }
 
-  close() {
+  takeInitialSnapshot() {
+    this.initialSnapshot = {
+      title: this.titleInput.value.trim(),
+      content: this.contentInput.value.trim(),
+      date: this.dateInput.value,
+      time: this.timeInput.value,
+      mood: this.selectedMood,
+      tagsCount: this.selectedTags.size,
+      photosCount: this.currentPhotos.length,
+      albumUrl: this.albumUrlInput ? this.albumUrlInput.value.trim() : '',
+      albumTitle: this.albumTitleInput ? this.albumTitleInput.value.trim() : ''
+    };
+  }
+
+  hasUnsavedChanges() {
+    if (!this.initialSnapshot) return false;
+
+    const curTitle = this.titleInput.value.trim();
+    const curContent = this.contentInput.value.trim();
+    const curAlbumUrl = this.albumUrlInput ? this.albumUrlInput.value.trim() : '';
+    const curAlbumTitle = this.albumTitleInput ? this.albumTitleInput.value.trim() : '';
+
+    if (!this.currentEntryId) {
+      // 新規作成時は、何かしら入力されているかをチェック
+      return Boolean(
+        curTitle ||
+        curContent ||
+        this.currentPhotos.length > 0 ||
+        curAlbumUrl ||
+        curAlbumTitle
+      );
+    }
+
+    // 編集時は開いた時との差分をチェック
+    return (
+      curTitle !== this.initialSnapshot.title ||
+      curContent !== this.initialSnapshot.content ||
+      this.dateInput.value !== this.initialSnapshot.date ||
+      this.timeInput.value !== this.initialSnapshot.time ||
+      this.selectedMood !== this.initialSnapshot.mood ||
+      this.selectedTags.size !== this.initialSnapshot.tagsCount ||
+      this.currentPhotos.length !== this.initialSnapshot.photosCount ||
+      curAlbumUrl !== this.initialSnapshot.albumUrl ||
+      curAlbumTitle !== this.initialSnapshot.albumTitle
+    );
+  }
+
+  /**
+   * エディタを閉じる（未保存変更がある場合は確認）
+   * @param {boolean} force 
+   */
+  close(force = false) {
+    if (!force && this.hasUnsavedChanges()) {
+      const isNew = !this.currentEntryId;
+      const msg = isNew
+        ? '書きかけの内容があります。エディタを閉じますか？\n（入力内容は下書きとして保存され、次回自動で復元されます）'
+        : '変更された内容があります。保存せずに閉じますか？';
+
+      if (!confirm(msg)) {
+        return;
+      }
+    }
+
     this.modal.classList.remove('active');
     if (this.onCancel) this.onCancel();
   }
@@ -235,6 +387,7 @@ export class DiaryEditor {
           this.selectedTags.add(tag);
         }
         this.renderTags();
+        this.scheduleDraftSave();
       });
       this.quickTagsContainer.appendChild(chip);
     });
@@ -249,6 +402,7 @@ export class DiaryEditor {
         chip.addEventListener('click', () => {
           this.selectedTags.delete(tag);
           this.renderTags();
+          this.scheduleDraftSave();
         });
         this.quickTagsContainer.appendChild(chip);
       }
@@ -276,6 +430,7 @@ export class DiaryEditor {
       }
     }
     this.renderPhotosPreview();
+    this.scheduleDraftSave();
   }
 
   /**
@@ -332,6 +487,7 @@ export class DiaryEditor {
         e.stopPropagation();
         this.currentPhotos.splice(index, 1);
         this.renderPhotosPreview();
+        this.scheduleDraftSave();
       });
 
       item.appendChild(img);
@@ -343,6 +499,108 @@ export class DiaryEditor {
   updateCharCount() {
     const len = this.contentInput.value.length;
     this.charCount.textContent = `${len} 文字`;
+  }
+
+  // --- 自動下書き保存 (Draft System) ---
+
+  scheduleDraftSave() {
+    // 新規作成中のみ自動保存（既存日記の編集中は不用意な上書きを避ける）
+    if (this.currentEntryId) return;
+
+    clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => {
+      this.saveDraft();
+    }, 400);
+  }
+
+  saveDraft() {
+    if (this.currentEntryId) return;
+
+    const title = this.titleInput.value;
+    const content = this.contentInput.value;
+    const albumUrl = this.albumUrlInput ? this.albumUrlInput.value : '';
+    const albumTitle = this.albumTitleInput ? this.albumTitleInput.value : '';
+
+    // すべて空なら下書きを削除
+    if (!title.trim() && !content.trim() && this.currentPhotos.length === 0 && !albumUrl.trim() && !albumTitle.trim()) {
+      this.clearDraft();
+      return;
+    }
+
+    const draftData = {
+      title,
+      content,
+      date: this.dateInput.value,
+      time: this.timeInput.value,
+      mood: this.selectedMood,
+      tags: Array.from(this.selectedTags),
+      prompt: this.currentPrompt,
+      albumUrl,
+      albumTitle,
+      photos: this.currentPhotos,
+      savedAt: Date.now()
+    };
+
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+    } catch (e) {
+      // 写真のBase64等でLocalStorageの容量制限に達した場合は写真を除いてテキストを死守
+      try {
+        draftData.photos = [];
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+      } catch (err2) {
+        console.warn('Draft auto-save failed:', err2);
+      }
+    }
+  }
+
+  loadDraft() {
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (
+        data &&
+        (data.title || data.content || (data.photos && data.photos.length > 0) || data.albumUrl)
+      ) {
+        return data;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  clearDraft() {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (this.draftBanner) {
+      this.draftBanner.style.display = 'none';
+    }
+  }
+
+  discardDraft() {
+    if (!confirm('書きかけの下書きを破棄して白紙に戻しますか？')) return;
+
+    this.clearDraft();
+
+    const now = new Date();
+    this.dateInput.value = formatLocalDate(now);
+    this.timeInput.value = formatLocalTime(now);
+    this.titleInput.value = '';
+    this.contentInput.value = '';
+    this.selectedMood = 'happy';
+    this.selectedTags = new Set();
+    this.currentPhotos = [];
+    this.currentPrompt = '';
+    if (this.albumUrlInput) this.albumUrlInput.value = '';
+    if (this.albumTitleInput) this.albumTitleInput.value = '';
+
+    this.setMood(this.selectedMood);
+    this.renderPrompt();
+    this.renderTags();
+    this.renderPhotosPreview();
+    this.updateCharCount();
+    this.takeInitialSnapshot();
   }
 
   /**
@@ -380,6 +638,10 @@ export class DiaryEditor {
       this.onSave(entryData);
     }
 
-    this.close();
+    // 保存完了後は下書きを削除
+    this.clearDraft();
+
+    // 強制クローズ（未保存アラートを出さずに閉じる）
+    this.close(true);
   }
 }

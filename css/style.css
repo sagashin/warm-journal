@@ -2253,6 +2253,7 @@ body.app-locked .app-header {
 
 .ai-badge-source {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
@@ -2262,8 +2263,78 @@ body.app-locked .app-header {
   border-radius: var(--radius-full);
   font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   margin-bottom: 14px;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.ai-badge-source.fallback {
+  background: rgba(230, 140, 40, 0.12);
+  color: #b45309;
+  border-color: rgba(230, 140, 40, 0.3);
+}
+
+.ai-badge-source.offline {
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+/* AI通信エラー自動切替通知バナー */
+.ai-fallback-alert {
+  background: rgba(230, 140, 40, 0.08);
+  border: 1px solid rgba(230, 140, 40, 0.25);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: var(--text-main);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.ai-fallback-alert-title {
+  font-weight: 700;
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.ai-fallback-alert-reason {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  background: var(--bg-card);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(230, 140, 40, 0.35);
+  word-break: break-word;
+}
+
+.btn-fallback-settings {
+  align-self: flex-start;
+  padding: 6px 14px;
+  background: #d97706;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-fallback-settings:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .ai-response-body {
@@ -2315,6 +2386,55 @@ body.app-locked .app-header {
   background: var(--bg-card-subtle);
   padding: 12px 14px;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.input-with-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.input-with-action input {
+  flex: 1;
+}
+
+.input-with-action button {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+
+.ai-key-test-result {
+  font-size: 0.82rem;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+  word-break: break-word;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.ai-key-test-result.success {
+  background: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+  font-weight: 600;
+}
+
+.ai-key-test-result.error {
+  background: rgba(211, 47, 47, 0.08);
+  color: #c62828;
+  border: 1px solid rgba(211, 47, 47, 0.25);
+}
+
+.ai-key-test-result.loading {
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
   border: 1px solid var(--border-color);
 }
 
@@ -2868,6 +2988,48 @@ body.app-locked .app-header {
     gap: 10px;
   }
 }
+
+/* 下書き復元バナー */
+.editor-draft-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--color-accent-soft);
+  border: 1px solid rgba(217, 155, 102, 0.4);
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  color: var(--text-main);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.draft-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.btn-discard-draft {
+  background: transparent;
+  border: 1px solid rgba(200, 90, 90, 0.4);
+  color: var(--color-danger);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+}
+
+.btn-discard-draft:hover {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger);
+}
+
 
 
 

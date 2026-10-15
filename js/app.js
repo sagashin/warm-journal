@@ -12,6 +12,7 @@ import { OnThisDay } from './onThisDay.js';
 import { DiaryStats } from './stats.js';
 import { DiaryLock } from './lock.js';
 import { DiaryAI } from './ai.js';
+import { formatLocalDate } from './dateUtils.js';
 
 class DiaryApp {
   constructor() {
@@ -383,7 +384,7 @@ class DiaryApp {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `diary_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `diary_backup_${formatLocalDate()}.json`;
       a.click();
       URL.revokeObjectURL(url);
       this.showToast('バックアップファイルを書き出しました 📦', 'success');
@@ -437,13 +438,13 @@ class DiaryApp {
     const formatDate = (daysAgo) => {
       const d = new Date(today);
       d.setDate(d.getDate() - daysAgo);
-      return d.toISOString().split('T')[0];
+      return formatLocalDate(d);
     };
 
     // 1年前の今日
     const lastYearDate = new Date(today);
     lastYearDate.setFullYear(lastYearDate.getFullYear() - 1);
-    const lastYearDateStr = lastYearDate.toISOString().split('T')[0];
+    const lastYearDateStr = formatLocalDate(lastYearDate);
 
     const samples = [
       {

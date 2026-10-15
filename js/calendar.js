@@ -4,6 +4,7 @@
  */
 
 import { MOODS } from './editor.js';
+import { formatLocalDate } from './dateUtils.js';
 
 export class DiaryCalendar {
   constructor({ containerId, onDateClick, onEntryClick, onNewEntryForDate }) {
@@ -95,7 +96,7 @@ export class DiaryCalendar {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatLocalDate(new Date());
 
     // 前月の端数マス
     for (let i = firstDay - 1; i >= 0; i--) {

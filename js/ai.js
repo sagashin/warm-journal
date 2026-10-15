@@ -4,14 +4,31 @@
  */
 
 const GEMINI_API_KEY_STORAGE = 'warm_diary_gemini_key';
+const GEMINI_MODEL_STORAGE = 'warm_diary_gemini_model';
+
+// 利用可能なGeminiモデル（優先順）
+const CANDIDATE_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-1.5-flash',
+  'gemini-2.0-flash',
+  'gemini-3.5-flash'
+];
 
 export class DiaryAI {
   constructor({ onCommentReady }) {
     this.onCommentReady = onCommentReady;
     this.apiKey = localStorage.getItem(GEMINI_API_KEY_STORAGE) || '';
+    this.activeModel = localStorage.getItem(GEMINI_MODEL_STORAGE) || CANDIDATE_MODELS[0];
 
     this.initElements();
     this.attachEvents();
+  }
+
+  cleanKey(key) {
+    return (key || '')
+      .trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '');
   }
 
   initElements() {
@@ -28,6 +45,11 @@ export class DiaryAI {
     this.btnRemoveApiKey = document.getElementById('btnRemoveApiKey');
     this.btnCloseApiKeyModal = document.getElementById('btnCloseApiKeyModal');
     this.btnHeaderAi = document.getElementById('btnHeaderAi');
+
+    // 新規要素: キー可視化・接続テスト
+    this.btnToggleApiKeyVisibility = document.getElementById('btnToggleApiKeyVisibility');
+    this.btnTestApiKey = document.getElementById('btnTestApiKey');
+    this.testResultElem = document.getElementById('aiKeyTestResult');
   }
 
   attachEvents() {
@@ -53,15 +75,35 @@ export class DiaryAI {
     if (this.btnRemoveApiKey) {
       this.btnRemoveApiKey.addEventListener('click', () => this.removeApiKey());
     }
+
+    // パスワード表示切り替え
+    if (this.btnToggleApiKeyVisibility && this.inputApiKey) {
+      this.btnToggleApiKeyVisibility.addEventListener('click', () => {
+        const isPassword = this.inputApiKey.type === 'password';
+        this.inputApiKey.type = isPassword ? 'text' : 'password';
+        this.btnToggleApiKeyVisibility.textContent = isPassword ? '🙈' : '👁️';
+      });
+    }
+
+    // 接続テスト
+    if (this.btnTestApiKey) {
+      this.btnTestApiKey.addEventListener('click', () => this.testConnection());
+    }
   }
 
   hasApiKey() {
-    return Boolean(this.apiKey && this.apiKey.trim());
+    return Boolean(this.cleanKey(this.apiKey));
   }
 
   openKeySettings() {
     this.inputApiKey.value = this.apiKey;
+    this.inputApiKey.type = 'password';
+    if (this.btnToggleApiKeyVisibility) this.btnToggleApiKeyVisibility.textContent = '👁️';
     this.btnRemoveApiKey.style.display = this.hasApiKey() ? 'inline-flex' : 'none';
+    if (this.testResultElem) {
+      this.testResultElem.style.display = 'none';
+      this.testResultElem.innerHTML = '';
+    }
     this.apiKeyModal.classList.add('active');
   }
 
@@ -69,31 +111,161 @@ export class DiaryAI {
     this.apiKeyModal.classList.remove('active');
   }
 
+  showTestResult(message, type = 'info') {
+    if (!this.testResultElem) return;
+    this.testResultElem.className = `ai-key-test-result ${type}`;
+    this.testResultElem.style.display = 'block';
+    this.testResultElem.innerHTML = message;
+  }
+
+  /**
+   * 接続テスト実行
+   */
+  async testConnection() {
+    const rawKey = this.inputApiKey ? this.inputApiKey.value : this.apiKey;
+    const key = this.cleanKey(rawKey);
+
+    if (!key) {
+      this.showTestResult('⚠️ APIキーが入力されていません。キーを入力してからテストしてください。', 'error');
+      return;
+    }
+
+    this.showTestResult('⏳ Gemini APIへの接続をテスト中...', 'loading');
+    if (this.btnTestApiKey) this.btnTestApiKey.disabled = true;
+
+    try {
+      const result = await this.testApiKey(key);
+      if (result.success) {
+        this.activeModel = result.model;
+        localStorage.setItem(GEMINI_MODEL_STORAGE, result.model);
+        this.showTestResult(`✅ 接続成功！Gemini API（モデル: <strong>${result.model}</strong>）と正常に通信できました。`, 'success');
+      } else {
+        this.showTestResult(`❌ 接続失敗: ${result.message}`, 'error');
+      }
+    } catch (err) {
+      this.showTestResult(`❌ 通信エラー: ${this.formatErrorMessage(err)}`, 'error');
+    } finally {
+      if (this.btnTestApiKey) this.btnTestApiKey.disabled = false;
+    }
+  }
+
+  /**
+   * 単一キーでのAPI検証
+   */
+  async testApiKey(key) {
+    const modelsToTry = [this.activeModel, ...CANDIDATE_MODELS.filter(m => m !== this.activeModel)];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Hello' }] }],
+            generationConfig: { maxOutputTokens: 5 }
+          })
+        });
+
+        if (response.ok) {
+          return { success: true, model };
+        }
+
+        let errDetails = '';
+        try {
+          const errJson = await response.json();
+          errDetails = errJson.error?.message || '';
+        } catch (_) {}
+
+        lastError = {
+          status: response.status,
+          message: errDetails || response.statusText,
+          model
+        };
+
+        // モデル固有の404/403であれば次のモデルを試行
+        if (response.status === 404 || (response.status === 403 && (errDetails.includes('model') || errDetails.includes('access')))) {
+          continue;
+        } else {
+          // キー自体が無効(400)やクォータ枯渇(429)などの場合は即終了
+          break;
+        }
+      } catch (err) {
+        lastError = {
+          status: 0,
+          message: err.message || 'Network error',
+          model
+        };
+        break;
+      }
+    }
+
+    return {
+      success: false,
+      status: lastError?.status,
+      message: this.formatErrorMessage(lastError)
+    };
+  }
+
   saveApiKey() {
-    const key = this.inputApiKey.value.trim();
+    const rawKey = this.inputApiKey.value;
+    const key = this.cleanKey(rawKey);
+
     if (!key) {
       alert('APIキーを入力してください。');
       return;
     }
+
     this.apiKey = key;
     localStorage.setItem(GEMINI_API_KEY_STORAGE, key);
     this.closeKeySettings();
-    alert('Gemini APIキーを保存しました ✨ 高度なAI共感アシスタントが有効になりました。');
+    alert('Gemini APIキーを保存しました ✨\n日記を開いて「🌿」をタップすると高度なAIメッセージが届きます。');
   }
 
   removeApiKey() {
     if (!confirm('保存したAPIキーを削除しますか？')) return;
     this.apiKey = '';
     localStorage.removeItem(GEMINI_API_KEY_STORAGE);
+    if (this.inputApiKey) this.inputApiKey.value = '';
     this.closeKeySettings();
-    alert('APIキーを削除しました。スマート共感モード（オフライン動作）で動作します。');
+    alert('APIキーを削除しました。スマート共感モード（完全オフライン）で動作します。');
+  }
+
+  formatErrorMessage(err) {
+    if (!err) return '不明なエラーが発生しました。';
+    const status = err.status || 0;
+    const msg = (err.message || '').toString();
+    const details = (err.details || '').toString();
+
+    if (status === 400 || msg.includes('API_KEY_INVALID') || details.includes('API_KEY_INVALID') || msg.includes('API key not valid')) {
+      return '【APIキー無効 (400)】APIキーが正しく認識されませんでした。Google AI Studio (aistudio.google.com) で取得したキー（通常 AIzaSy... で始まります）を正しく貼り付けているか、余計な記号や空白がないかご確認ください。';
+    }
+    if (status === 403 || msg.includes('PERMISSION_DENIED') || details.includes('PERMISSION_DENIED')) {
+      return '【アクセス権限エラー (403)】APIキーのアクセス制限（Webサイト制限・IP制限）が原因の可能性があります。Google Cloud ConsoleでAPIキーの制限を「なし」にするか、現在のサイトURLを許可してください。またGenerative Language APIが有効かご確認ください。';
+    }
+    if (status === 429 || msg.includes('RESOURCE_EXHAUSTED') || details.includes('RESOURCE_EXHAUSTED')) {
+      return '【利用枠上限 (429)】APIの利用上限（無料枠のクォータ）に達しています。少し時間を置いてから再度お試しください。';
+    }
+    if (status === 404) {
+      return '【モデル未対応 (404)】指定されたGeminiモデルがお使いのAPIキーまたはリージョンで利用できませんでした。';
+    }
+    if (status === 0 || msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
+      return '【通信エラー】Googleサーバーとの通信に失敗しました。インターネット接続、またはブラウザの広告ブロック拡張機能・コンテンツブロッカー（AdGuard等）がGoogle APIを遮断していないかご確認ください。';
+    }
+
+    return `【エラー ${status || '通信障害'}】${details || msg}`;
   }
 
   /**
    * 日記に対するAIフィードバックの生成と表示
    */
   async generateReflection(entry) {
-    this.modalTitle.textContent = `🌿 ${entry.title || '今日の日記'} へのAIメッセージ`;
+    // タイトルの二重アイコンを防ぐ
+    this.modalTitle.textContent = `${entry.title || '今日の日記'} へのAIメッセージ`;
     this.contentTarget.innerHTML = '';
     this.loadingElem.style.display = 'flex';
     this.modal.classList.add('active');
@@ -108,20 +280,21 @@ export class DiaryAI {
       }
 
       this.loadingElem.style.display = 'none';
-      this.renderFeedbackResult(result);
+      this.renderFeedbackResult(result, false);
     } catch (err) {
       console.warn('Gemini API call failed, falling back to smart reflection:', err);
       const fallback = await this.generateSmartOfflineReflection(entry);
       this.loadingElem.style.display = 'none';
-      this.renderFeedbackResult(fallback, true);
+      this.renderFeedbackResult(fallback, true, err);
     }
   }
 
   /**
-   * Gemini API 呼び出し
+   * Gemini API 呼び出し（複数モデルの自動フォールバック対応）
    */
   async callGeminiApi(entry) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+    const key = this.cleanKey(this.apiKey);
+    if (!key) throw new Error('APIキーが設定されていません。');
 
     const prompt = `
 あなたは優しく心に寄り添う親友のような日記アシスタントです。
@@ -143,34 +316,80 @@ ${entry.content}
 3. 🌱 明日へのやさしい問いかけ（明日がちょっと楽しみになるような、プレッシャーのない小さな質問）
 `;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 600
-        }
-      })
-    });
+    const modelsToTry = [this.activeModel, ...CANDIDATE_MODELS.filter(m => m !== this.activeModel)];
+    let lastError = null;
 
-    if (!response.ok) {
-      throw new Error(`Gemini API Error: ${response.status}`);
+    for (const model of modelsToTry) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 800
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            // 成功したモデルを記録
+            this.activeModel = model;
+            localStorage.setItem(GEMINI_MODEL_STORAGE, model);
+            return {
+              source: `Gemini (${model})`,
+              text
+            };
+          }
+        }
+
+        let errDetails = '';
+        try {
+          const errJson = await response.json();
+          errDetails = errJson.error?.message || '';
+        } catch (_) {}
+
+        lastError = {
+          status: response.status,
+          message: errDetails || response.statusText,
+          model
+        };
+
+        // モデル未対応なら次のモデルへフォールバック
+        if (response.status === 404 || (response.status === 403 && (errDetails.includes('model') || errDetails.includes('access')))) {
+          console.info(`Model ${model} not available, trying next candidate...`);
+          continue;
+        } else {
+          // キー自体のエラーなどはループ脱出
+          break;
+        }
+      } catch (err) {
+        lastError = {
+          status: 0,
+          message: err.message || '通信に失敗しました',
+          model
+        };
+        break;
+      }
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Empty response from Gemini');
-
-    return {
-      source: 'Gemini AI',
-      text
-    };
+    const errorToThrow = new Error(this.formatErrorMessage(lastError));
+    errorToThrow.status = lastError?.status;
+    errorToThrow.details = lastError?.message;
+    throw errorToThrow;
   }
 
   /**
@@ -236,23 +455,60 @@ ${keywordComment}
     };
   }
 
-  renderFeedbackResult(result, isFallback = false) {
+  renderFeedbackResult(result, isFallback = false, error = null) {
+    // バッジ
     const badge = document.createElement('div');
-    badge.className = 'ai-badge-source';
-    badge.innerHTML = `<span>✨</span> ${result.source}${isFallback ? ' (自動切替)' : ''}`;
+    badge.className = `ai-badge-source ${isFallback ? 'fallback' : (!this.hasApiKey() ? 'offline' : '')}`;
+    badge.innerHTML = `<span>${isFallback ? '⚠️' : '✨'}</span> ${result.source}${isFallback ? ' (自動切替: オフライン共感モード)' : ''}`;
 
+    this.contentTarget.appendChild(badge);
+
+    // フォールバック時は理由と設定への誘導バナーを表示
+    if (isFallback) {
+      const alertBox = document.createElement('div');
+      alertBox.className = 'ai-fallback-alert';
+      alertBox.innerHTML = `
+        <div class="ai-fallback-alert-title">
+          <span>⚠️</span> Gemini API通信エラーのためオフラインで生成しました
+        </div>
+        <div class="ai-fallback-alert-reason">
+          ${this.formatErrorMessage(error)}
+        </div>
+        <button type="button" class="btn-fallback-settings" id="btnOpenSettingsFromFallback">
+          <span>⚙️</span> API設定を確認・テストする
+        </button>
+      `;
+
+      alertBox.querySelector('#btnOpenSettingsFromFallback').addEventListener('click', () => {
+        this.closeModal();
+        this.openKeySettings();
+        // 自動でテストを実行して何が問題かを表示
+        setTimeout(() => this.testConnection(), 300);
+      });
+
+      this.contentTarget.appendChild(alertBox);
+    }
+
+    // 本文
     const body = document.createElement('div');
     body.className = 'ai-response-body';
 
-    // マークダウン風の簡易パース
-    const html = result.text
+    const escapeHtml = (str) => {
+      return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+
+    const safeText = escapeHtml(result.text);
+    const html = safeText
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n\n/g, '<br><br>')
       .replace(/\n/g, '<br>');
 
     body.innerHTML = html;
-
-    this.contentTarget.appendChild(badge);
     this.contentTarget.appendChild(body);
   }
 

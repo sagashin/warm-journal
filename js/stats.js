@@ -4,6 +4,7 @@
  */
 
 import { MOODS } from './editor.js';
+import { formatLocalDate } from './dateUtils.js';
 
 export class DiaryStats {
   constructor({ containerId }) {
@@ -152,7 +153,7 @@ export class DiaryStats {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const toDateStr = (d) => d.toISOString().split('T')[0];
+    const toDateStr = (d) => formatLocalDate(d);
     const todayStr = toDateStr(today);
     const yesterdayStr = toDateStr(yesterday);
 
